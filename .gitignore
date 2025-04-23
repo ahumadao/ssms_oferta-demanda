@@ -2,6 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto
 produccion/
 output/*.csv
 output/*.xlsx
@@ -13,7 +17,4 @@ egresos/*.csv
 egresos/*.xlsx
 demanda/*.csv
 demanda/*.xlsx
-.Rdata
-.httr-oauth
-.DS_Store
-.quarto
+
