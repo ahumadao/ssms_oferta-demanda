@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+produccion/
+output/
+oferta/
+inscripcion/
+egresos/
+demanda/
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto
