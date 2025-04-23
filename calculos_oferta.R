@@ -39,5 +39,16 @@ programacion_cne_hblt <- fact_prog_CNEyCCE %>% filter(id_deis == 113100, id_acti
 
 produccion_programacion <- produccion_rem_hblt %>%
   left_join(programacion_cne_hblt %>% select(codigosigte,total_cne), by='codigosigte') %>%
-  rename(prog_cne_anual = total_cne)
+  rename(prog_cne_anual = total_cne) %>% 
+  left_join(import('general/rendimiento por especialidad.xlsx') %>% select(-desc_esp),by=c('codigosigte'='presta_min')) %>%
+  left_join(fact_horas_especialidades %>% 
+              filter(id_actividad == '1', id_deis == '113100') %>%
+              select(-id_actividad),
+            by= 'id_especialidad') %>%
+  mutate(
+    produccion_cne_estandar = round(horas_totales *distribucion_ambulatoria*distribucion_nueva*rendimiento_nueva*31.4,0),
+    proporcion_real_estandar = round(((produccion_cne + produccion_nsp_cne)/produccion_cne_estandar),2)
+  )
+
+promedios <- mean(produccion_programacion$proporcion_real_estandar, na.rm = TRUE)
             
