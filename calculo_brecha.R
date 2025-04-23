@@ -140,4 +140,4 @@ a_calculo_brecha_nuevas_PROY_ACT <- a_calculo_brecha_nuevas %>%
     proyeccion_produccion %>% select(1,5,8:12,19:21,-especialidad), by=c('presta_min'='x1')
     )
 
-export()
+
