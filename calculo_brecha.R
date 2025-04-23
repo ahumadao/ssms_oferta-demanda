@@ -43,7 +43,6 @@ fact_le_cne_insc <- fact_le_cne %>%
   select(-c(run,dv,rut_sdv,rut,rut_paciente,apellido_paterno))
 
 
-
 fact_ingresos_egresos_le_inscripcion <- bind_rows(fact_egresos_cne_insc, fact_le_cne_insc) %>%
   left_join(
     dim_especialidades %>% select(codigosigte,desc_esp), 
@@ -70,7 +69,6 @@ produccion_rem_hslbp <- fact_produccion_rem  %>%
     produccion_nsp_total = sum(total_nsp),
     produccion_nsp_cne = sum(nsp_nuevas)
   )
-
 
 ################################################################ #
 #### exportar ###### #

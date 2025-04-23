@@ -9,7 +9,7 @@ pacman::p_load(
   rio,
   ggthemes,
   ggsci,
-  readxl
+  readxl,fs
 )
 
 # 2. DIM ESTABLECIMIENTOS ----
@@ -140,34 +140,23 @@ rm(data_bruta)
 
 
 # 9. FACT PRODUCCIÓN ----
+# FACT REM DATOS ABIERTOS 
+# ######## Busco los datos de producción en el repositorio MINSAL ######## #
 
-# Listar los archivos válidos en la carpeta
-# archivos <- list.files(
-#   path = here('producción'),
-#   pattern = "^[^~$].*\\.xlsm$",
-#   full.names = TRUE
-# )
-# 
-# # Leer y procesar cada archivo
-# lista_datos <- lapply(archivos, function(file) {
-#   read_excel(file, sheet = 'A07', skip = 10) %>%
-#     select(1:2) %>%                          # Seleccionar las primeras 2 columnas
-#     slice(1:60) %>%                          # Tomar las primeras 60 filas
-#     rename('especialidad' = 1,               # Renombrar las columnas
-#            'consultas' = 2) %>%
-#     mutate(archivo = basename(file),
-#            codigo_deis = paste0("1", substr(basename(file), 1, 5)))         # Agregar el nombre del archivo
-# })
-# 
-# produccion_combinada <- bind_rows(lista_datos) %>%
-#   group_by(codigo_deis, especialidad) %>%
-#   summarise(
-#     consultas = sum(as.numeric(consultas))
-#   )
-# 
-# rm(archivos, lista_datos)
+# url          <- "https://repositoriodeis.minsal.cl/DatosAbiertos/REM/SERIE_REM_2024.zip"
+# fzip         <- tempfile(fileext = ".zip")
+# download.file(url, fzip, mode = "wb")
+# contenido <- unzip(fzip, list = TRUE)
 
-#10. FACT REM DATOS ABIERTOS ----
+# 1. Descomprime solo el archivo que necesitas
+
+# ruta_interna <- contenido$Name[grep("SerieA2024", contenido$Name)]
+# temp_csv     <- file.path(tempdir(), basename(ruta_interna))
+# unzip(fzip, files = ruta_interna, exdir = 'produccion/')
+
+
+# 2. Importa ya con rio
+rem_serieA <- import(paste0('produccion/',ruta_interna)) %>% clean_names()
 
 columnas_a07_seccion_a <- c("mes", "ano", "id_establecimiento", "codigo_prestacion",
               "id_region", "id_region", "id_comuna", 
@@ -209,9 +198,6 @@ prestaciones_a07_seccion_a1 <- c('09600342','09600343','09600344','09600345','09
 
 
 establecimientos <- c('113100','113130','113150','113180','113181')
-
-rem_serieA <- import(here('producción','rem_datosabiertos','SerieA2024.csv')) %>% clean_names()
-
 
 produccion_a07_seccion_a <- rem_serieA %>%
   filter(id_servicio == 13, codigo_prestacion %in% prestaciones_a07_seccion_a, id_establecimiento %in% establecimientos) %>%
