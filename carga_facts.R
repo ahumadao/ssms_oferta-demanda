@@ -9,6 +9,7 @@ pacman::p_load(
 )
 
 source('variables_proyecto.R')
+source('carga_dims.R')
 
 
 # 2. FACT PROGRAMACIÓN ----

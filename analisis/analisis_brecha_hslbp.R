@@ -13,7 +13,7 @@ pacman::p_load(
 )
 
 # 2. Traigo los objetos del normalizador ----
-source("normalizador.R")
+source('carga_facts.R')
 
 # 3. Proceso las bases para demanda inicial y producción ----
 
