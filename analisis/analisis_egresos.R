@@ -94,5 +94,6 @@ diagnosticos_np <- egresos_procesado |>
   group_by(desc_esp) |>
   slice_max(order_by = n, n = 10, with_ties = FALSE)
 
+nombre_archivo <- 'diagnosticos_np_especialidad_hegc.xlsx'
 export(diagnosticos_np, here('output','diagnosticos_np_especialidad_hegc.xlsx'))
 
