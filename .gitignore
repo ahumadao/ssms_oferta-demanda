@@ -27,6 +27,7 @@ produccion/*
 general/*
 !general/.gitkeep
 
+variables_proyecto.R
 
 *.csv
 *.xlsx

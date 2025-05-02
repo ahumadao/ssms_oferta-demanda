@@ -8,74 +8,53 @@ pacman::p_load(
   fs
 )
 
+source('variables_proyecto.R')
+
+
 # 2. FACT PROGRAMACIÓN ----
 
-hegc_m <- import('oferta/HEGC.xlsx',skip=0, sheet="Programación Medica") %>% clean_names()
-hblt_m <- import('oferta/HBLT.xlsx',skip=0,sheet=2) %>% clean_names()
-hdlc_m <- import('oferta/HDLC.xlsx',skip=0,sheet=2) %>% clean_names()
-hpino_m <- import('oferta/HPINO.xlsx',skip=0,sheet=2) %>% clean_names()
-hslb_m <- import('oferta/HSLBP.xlsx',skip=0,sheet=2) %>% clean_names()
+hegc_m <- import(ruta_fact_programacion_hegc, skip=0, sheet="Programación Medica") |> clean_names()
+hblt_m <- import(ruta_fact_programacion_hblt, skip=0,sheet=2) |> clean_names()
+hdlc_m <- import(ruta_fact_programacion_hdlc, skip=0,sheet=2) |> clean_names()
+hpino_m <- import(ruta_fact_programacion_hpino, skip=0,sheet=2) |> clean_names() |> rename('rutsdv'=3)
+hslb_m <- import(ruta_fact_programacion_hslbp, skip=0,sheet=2) |> clean_names()
 bases_m <- list(hegc_m, hblt_m,hdlc_m,hpino_m,hslb_m)
 
-consol_prog_med <- do.call(rbind, bases_m) #unir bases
+fact_programacion_medica <- do.call(rbind, bases_m) #unir bases
 rm(hblt_m, hdlc_m,hegc_m,hpino_m,hslb_m,bases_m) #remover datos no usados
-fact_prog_CNEyCCE <- consol_prog_med %>% #resumen anual
-  filter(
-    id_actividad %in% c(1,2)
-  ) %>% 
-  group_by(
-    id_deis,
-    id_especialidad,
-    id_actividad,
-    ) %>% 
-  summarise(
-    produccion_1_sem = sum(as.numeric(produccion_1_sem)),
-    produccion_2_sem = sum(as.numeric(produccion_2_sem)),
-    produccion_anual = produccion_1_sem + produccion_2_sem,
-    horas = sum(horas_asignadas)
-  )
-
-fact_horas_especialidades <- consol_prog_med %>%
-  group_by(id_deis,id_especialidad,id_actividad) %>%
-  summarise(
-    horas_totales = sum(total_horas_semanales_contratadas_run)
-  )
-
-
-rm(consol_prog_med)
 
 
 # 3. FACT LISTA DE ESPERA ----
 
-data_bruta <- import(here("demanda","sigte_15012025.xlsx"), sheet='Sigte')
+data_bruta <- import(ruta_fact_le_abierta)
 
-fact_le_cne <- data_bruta %>%
-  clean_names() %>%  # limpio los nombres de las columnas
+fact_le_abierta <- data_bruta |>
+  clean_names() |>  
   mutate(
     estab_dest = as.character(estab_dest),
-    estab_orig = as.character(estab_orig)) %>% 
-  left_join(dim_estab %>% select(codigo_vigente, nombre_oficial, nivel_de_atencion), 
-            by=c('estab_dest'='codigo_vigente')) %>%
+    estab_orig = as.character(estab_orig)) |> 
+  left_join(dim_estab |> select(codigo_vigente, nombre_oficial, nivel_de_atencion), 
+            by=c('estab_dest'='codigo_vigente')) |>
   rename(establecimiento_destino = nombre_oficial,
-         nivel_de_atencion_destino = nivel_de_atencion) %>% # renombro para evitar duplicidad de nombres
-  left_join(dim_estab %>% #junto los dataframes para obtener el est orig, comuna, nivel de atención
+         nivel_de_atencion_destino = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
+  left_join(dim_estab |> #junto los dataframes para obtener el est orig, comuna, nivel de atención
               select(codigo_vigente,
                      nombre_oficial, 
                      codigo_comuna,
                      nombre_comuna,
                      nivel_de_atencion), 
-            by=c('estab_orig'='codigo_vigente')) %>%
+            by=c('estab_orig'='codigo_vigente')) |>
   rename(establecimiento_origen = nombre_oficial,
-         nivel_de_atencion_origen = nivel_de_atencion) %>% # renombro para evitar duplicidad de nombres
-  left_join(dim_especialidades, by=c('presta_min'='codigosigte')) %>% # combino con especialidades
+         nivel_de_atencion_origen = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
+  left_join(dim_especialidades, by=c('presta_min'='codigosigte')) |> # combino con especialidades
   left_join( # combino con dataframe de abreviaciones
-    import(here('general','abreviacion.xlsx')) %>% 
-      clean_names() %>% 
+    import(ruta_dim_abreviaciones) |> 
+      clean_names() |> 
       mutate(codigo_vigente = as.character(codigo_vigente)), 
-    by=c('estab_dest'='codigo_vigente')) %>%
-  rename('abrev_destino'='abreviacion') %>%
-  filter(is.na(tipo_error),tipo_prest == 1,is.na(f_salida)) %>% #tipo_prest =1:CNE =4:Qx
-  select(-comuna) %>%
+    by=c('estab_dest'='codigo_vigente')) |>
+  rename('abrev_destino'='abreviacion') |>
+  filter(is.na(f_salida)) |> #tipo_prest =1:CNE =4:Qx
+  select(-comuna) |>
   select(run,dv,sexo, fecha_nac, 
          estab_orig ,codigo_comuna, f_entrada, tipo_prest ,presta_min,sospecha_diag, 
          estab_dest,presta_est, 
@@ -84,39 +63,36 @@ fact_le_cne <- data_bruta %>%
 
 rm(data_bruta)
 
-
-
 # 4. FACT EGRESOS 2024 ----
 
-egresos_bruto <- import(here("egresos","egresos_cne_2025.xlsx"))
+egresos_bruto <- import(ruta_fact_le_cerrada)
 
-fact_egresos_cne <- egresos_bruto %>%
-  clean_names() %>%  # limpio los nombres de las columnas
+fact_le_cerrada <- egresos_bruto |>
+  clean_names() |>  
   mutate(
     estab_dest = as.character(estab_dest),
-    estab_orig = as.character(estab_orig)) %>% 
-  left_join(dim_estab %>% select(codigo_vigente, nombre_oficial, nivel_de_atencion), 
-            by=c('estab_dest'='codigo_vigente')) %>%
+    estab_orig = as.character(estab_orig)) |> 
+  left_join(dim_estab |> select(codigo_vigente, nombre_oficial, nivel_de_atencion), 
+            by=c('estab_dest'='codigo_vigente')) |>
   rename(establecimiento_destino = nombre_oficial,
-         nivel_de_atencion_destino = nivel_de_atencion) %>% # renombro para evitar duplicidad de nombres
-  left_join(dim_estab %>% #junto los dataframes para obtener el est orig, comuna, nivel de atención
+         nivel_de_atencion_destino = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
+  left_join(dim_estab |> #junto los dataframes para obtener el est orig, comuna, nivel de atención
               select(codigo_vigente,
                      nombre_oficial, 
                      codigo_comuna,
                      nombre_comuna,
                      nivel_de_atencion), 
-            by=c('estab_orig'='codigo_vigente')) %>%
+            by=c('estab_orig'='codigo_vigente')) |>
   rename(establecimiento_origen = nombre_oficial,
-         nivel_de_atencion_origen = nivel_de_atencion) %>% # renombro para evitar duplicidad de nombres
-  left_join(dim_especialidades, by=c('presta_min'='codigosigte')) %>% # combino con especialidades
+         nivel_de_atencion_origen = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
+  left_join(dim_especialidades, by=c('presta_min'='codigosigte')) |> # combino con especialidades
   left_join( # combino con dataframe de abreviaciones
-    import(here('general','abreviacion.xlsx')) %>% 
-      clean_names() %>% 
+    import(ruta_dim_abreviaciones) |> 
+      clean_names() |> 
       mutate(codigo_vigente = as.character(codigo_vigente)), 
-    by=c('estab_dest'='codigo_vigente')) %>%
-  rename('abrev_destino'='abreviacion') %>%
-  filter(tipo_prest == 1, f_salida > dmy('31-12-2023')) %>% #tipo_prest =1:CNE =4:Qx
-  select(-comuna) %>%
+    by=c('estab_dest'='codigo_vigente')) |>
+  rename('abrev_destino'='abreviacion') |>
+  select(-comuna) |>
   select(run,dv, sexo, fecha_nac, 
          estab_orig ,codigo_comuna, f_entrada, tipo_prest ,presta_min,sospecha_diag, 
          estab_dest,presta_est, 
@@ -128,31 +104,23 @@ rm(egresos_bruto)
   
 # 5. FACT PRODUCCIÓN REM DATOS ABIERTOS ----
 
-pacman::p_load(
-  tidyverse, # Manejo de datos
-  here,      # Directorios relativos
-  janitor,   # Limpieza de dataframes
-  rio,       # Importación rápida
-  fs         # Manejo seguro de archivos
-)
-
 # Descargar archivo
 
-url <- "https://repositoriodeis.minsal.cl/DatosAbiertos/REM/SERIE_REM_2024.zip" # Definir URL
-output_dir <- here('produccion')
-dir_create(output_dir)   # Crear carpeta declarada si no existe. # Uso 'here' para directorio relativo. Aquí se declara la carpeta de output.
-fzip <- tempfile(fileext = ".zip") # Generar un archivo ZIP en archivos temporales "temp".
-download.file(url, destfile = fzip, mode = "wb", quiet = TRUE) # Descargar archivo en fzip. 
-contenido <- unzip(fzip, list = TRUE) # Listar contenido del ZIP.
-archivo_target <- contenido$Name[grep("SerieA2024", contenido$Name)] # Identificar el archivo que necesitas
-if(length(archivo_target) == 0) stop("Archivo 'SerieA2024' no encontrado en el ZIP.") # Validar que exista
-unzip(fzip, files = archivo_target, exdir = output_dir) # Extraer SOLO el archivo deseado
-file_delete(fzip) # Limpiar: eliminar ZIP temporal
-cat("Archivo extraído exitosamente a:\n", file.path(output_dir, basename(archivo_target)), "\n")# Confirmación
+# url <- "https://repositoriodeis.minsal.cl/DatosAbiertos/REM/SERIE_REM_2024.zip" # Definir URL
+# output_dir <- here('produccion')
+# dir_create(output_dir)   # Crear carpeta declarada si no existe. # Uso 'here' para directorio relativo. Aquí se declara la carpeta de output.
+# fzip <- tempfile(fileext = ".zip") # Generar un archivo ZIP en archivos temporales "temp".
+# download.file(url, destfile = fzip, mode = "wb", quiet = TRUE) # Descargar archivo en fzip. 
+# contenido <- unzip(fzip, list = TRUE) # Listar contenido del ZIP.
+# archivo_target <- contenido$Name[grep("SerieA2024", contenido$Name)] # Identificar el archivo que necesitas
+# if(length(archivo_target) == 0) stop("Archivo 'SerieA2024' no encontrado en el ZIP.") # Validar que exista
+# unzip(fzip, files = archivo_target, exdir = output_dir) # Extraer SOLO el archivo deseado
+# file_delete(fzip) # Limpiar: eliminar ZIP temporal
+# cat("Archivo extraído exitosamente a:\n", file.path(output_dir, basename(archivo_target)), "\n")# Confirmación
 
 # Importar 
 
-rem_serieA <- import(here('produccion','Datos','SerieA2024.csv')) |> clean_names()
+rem_serieA <- import(ruta_fact_produccion_rem_deis) |> clean_names()
 
 # 
 
@@ -197,9 +165,9 @@ prestaciones_a07_seccion_a1 <- c('09600342','09600343','09600344','09600345','09
 
 establecimientos <- c('113100','113130','113150','113180','113181')
 
-produccion_a07_seccion_a <- rem_serieA %>%
-  filter(id_servicio == 13, codigo_prestacion %in% prestaciones_a07_seccion_a, id_establecimiento %in% establecimientos) %>%
-  select(columnas_a07_seccion_a) %>%
+produccion_a07_seccion_a <- rem_serieA |>
+  filter(id_servicio == 13, codigo_prestacion %in% prestaciones_a07_seccion_a, id_establecimiento %in% establecimientos) |>
+  select(columnas_a07_seccion_a) |>
   rename(
     total_consultas = col01,
     total_beneficiarios = col19,
@@ -207,15 +175,15 @@ produccion_a07_seccion_a <- rem_serieA %>%
     sexo_mujeres = col21,
     consultas_menores15 = col22,
     consultas_mayores = col26
-  ) %>%
+  ) |>
   left_join(
-    dim_especialidades %>% select(id_esp_seccion_a,codigosigte), 
+    dim_especialidades |> select(id_esp_seccion_a,codigosigte), 
     by=c('codigo_prestacion' ='id_esp_seccion_a' )
   )
 
-produccion_a07_seccion_a1 <- rem_serieA %>%
-  filter(id_servicio == 13, codigo_prestacion %in% prestaciones_a07_seccion_a1, id_establecimiento %in% establecimientos) %>%
-  select(columnas_a07_seccion_a1) %>%
+produccion_a07_seccion_a1 <- rem_serieA |>
+  filter(id_servicio == 13, codigo_prestacion %in% prestaciones_a07_seccion_a1, id_establecimiento %in% establecimientos) |>
+  select(columnas_a07_seccion_a1) |>
   rename(
     pertinentes = col01,
     pertinentes_aps = col02,
@@ -226,18 +194,18 @@ produccion_a07_seccion_a1 <- rem_serieA %>%
     cr_alta_mayor15 = col17,
     nsp_nuevas = col20,
     nsp_controles = col21
-  ) %>%
+  ) |>
   left_join(
-    dim_especialidades %>% select(id_esp_seccion_b,codigosigte), 
+    dim_especialidades |> select(id_esp_seccion_b,codigosigte), 
     by=c('codigo_prestacion' ='id_esp_seccion_b' )
   ) 
 
-fact_produccion_rem <- produccion_a07_seccion_a %>%
+fact_produccion_rem <- produccion_a07_seccion_a |>
   left_join(produccion_a07_seccion_a1, by = c('id_establecimiento','codigosigte','mes','ano','id_region','id_comuna'))
 
 rm(produccion_a07_seccion_a,produccion_a07_seccion_a1,produccion_combinada,produccion_da, rem_serieA)
 rm(columnas_a07_seccion_a,columnas_a07_seccion_a1,establecimientos,prestaciones_a07_seccion_a,prestaciones_a07_seccion_a1)
 
-fact_produccion_rem <- fact_produccion_rem %>%
+fact_produccion_rem_consultas <- fact_produccion_rem |>
   mutate(id_establecimiento = as.character(id_establecimiento))
 
