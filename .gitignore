@@ -24,5 +24,9 @@ demanda/*
 produccion/*
 !produccion/.gitkeep
 
+general/*
+!general/.gitkeep
+
+
 *.csv
 *.xlsx
