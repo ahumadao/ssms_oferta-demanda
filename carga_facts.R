@@ -210,3 +210,4 @@ rm(columnas_a07_seccion_a,columnas_a07_seccion_a1,establecimientos,prestaciones_
 fact_produccion_rem_consultas <- fact_produccion_rem |>
   mutate(id_establecimiento = as.character(id_establecimiento))
 
+fact_mapa_derivacion_trakcare <- import(ruta_fact_mapa_derivacion_trakcare,encoding = 'Latin-1') |> clean_names() 

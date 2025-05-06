@@ -52,6 +52,7 @@ dim_tipo_prestaciones_le <- data.frame(
                   "Procedimiento",
                   "Intervención quirúrgica"))
 
+dim_abreviaciones <- import(ruta_dim_abreviaciones) |> clean_names()
 
 # 7. DIM ESTABLECIMIENTO DE INSCRIPCIÓN ----
 
