@@ -14,7 +14,7 @@ source('carga_dims.R')
 
 # 2. FACT PROGRAMACIÓN ----
 
-hegc_m <- import(ruta_fact_programacion_hegc, skip=0, sheet="Programación Medica") |> clean_names()
+hegc_m <- import(ruta_fact_programacion_hegc, skip=0, sheet= "Programación Medica") |> clean_names()
 hblt_m <- import(ruta_fact_programacion_hblt, skip=0,sheet=2) |> clean_names()
 hdlc_m <- import(ruta_fact_programacion_hdlc, skip=0,sheet=2) |> clean_names()
 hpino_m <- import(ruta_fact_programacion_hpino, skip=0,sheet=2) |> clean_names() |> rename('rutsdv'=3)
@@ -24,82 +24,19 @@ bases_m <- list(hegc_m, hblt_m,hdlc_m,hpino_m,hslb_m)
 fact_programacion_medica <- do.call(rbind, bases_m) #unir bases
 rm(hblt_m, hdlc_m,hegc_m,hpino_m,hslb_m,bases_m) #remover datos no usados
 
-
 # 3. FACT LISTA DE ESPERA ----
 
-data_bruta <- import(ruta_fact_le_abierta)
+bruta_abierta <- import(ruta_fact_le_abierta)
+bruta_cerrada <- import(ruta_fact_le_cerrada)
 
-fact_le_abierta <- data_bruta |>
-  clean_names() |>  
-  mutate(
-    estab_dest = as.character(estab_dest),
-    estab_orig = as.character(estab_orig)) |> 
-  left_join(dim_estab |> select(codigo_vigente, nombre_oficial, nivel_de_atencion), 
-            by=c('estab_dest'='codigo_vigente')) |>
-  rename(establecimiento_destino = nombre_oficial,
-         nivel_de_atencion_destino = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
-  left_join(dim_estab |> #junto los dataframes para obtener el est orig, comuna, nivel de atención
-              select(codigo_vigente,
-                     nombre_oficial, 
-                     codigo_comuna,
-                     nombre_comuna,
-                     nivel_de_atencion), 
-            by=c('estab_orig'='codigo_vigente')) |>
-  rename(establecimiento_origen = nombre_oficial,
-         nivel_de_atencion_origen = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
-  left_join(dim_especialidades, by=c('presta_min'='codigosigte')) |> # combino con especialidades
-  left_join( # combino con dataframe de abreviaciones
-    import(ruta_dim_abreviaciones) |> 
-      clean_names() |> 
-      mutate(codigo_vigente = as.character(codigo_vigente)), 
-    by=c('estab_dest'='codigo_vigente')) |>
-  rename('abrev_destino'='abreviacion') |>
-  filter(is.na(f_salida)) |> #tipo_prest =1:CNE =4:Qx
-  select(-comuna) |>
-  select(run,dv,sexo, fecha_nac, 
-         estab_orig ,codigo_comuna, f_entrada, tipo_prest ,presta_min,sospecha_diag, 
-         estab_dest,presta_est, 
-         f_salida, c_salida) 
+le_completa_procesada <- unir_le_abierta_cerrada(abierta_bruta,cerrada_bruta)
 
-
+fact_le_abierta <- procesar_fact_le(data_bruta) 
 rm(data_bruta)
 
 # 4. FACT EGRESOS 2024 ----
 
-egresos_bruto <- import(ruta_fact_le_cerrada)
-
-fact_le_cerrada <- egresos_bruto |>
-  clean_names() |>  
-  mutate(
-    estab_dest = as.character(estab_dest),
-    estab_orig = as.character(estab_orig)) |> 
-  left_join(dim_estab |> select(codigo_vigente, nombre_oficial, nivel_de_atencion), 
-            by=c('estab_dest'='codigo_vigente')) |>
-  rename(establecimiento_destino = nombre_oficial,
-         nivel_de_atencion_destino = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
-  left_join(dim_estab |> #junto los dataframes para obtener el est orig, comuna, nivel de atención
-              select(codigo_vigente,
-                     nombre_oficial, 
-                     codigo_comuna,
-                     nombre_comuna,
-                     nivel_de_atencion), 
-            by=c('estab_orig'='codigo_vigente')) |>
-  rename(establecimiento_origen = nombre_oficial,
-         nivel_de_atencion_origen = nivel_de_atencion) |> # renombro para evitar duplicidad de nombres
-  left_join(dim_especialidades, by=c('presta_min'='codigosigte')) |> # combino con especialidades
-  left_join( # combino con dataframe de abreviaciones
-    import(ruta_dim_abreviaciones) |> 
-      clean_names() |> 
-      mutate(codigo_vigente = as.character(codigo_vigente)), 
-    by=c('estab_dest'='codigo_vigente')) |>
-  rename('abrev_destino'='abreviacion') |>
-  select(-comuna) |>
-  select(run,dv, sexo, fecha_nac, 
-         estab_orig ,codigo_comuna, f_entrada, tipo_prest ,presta_min,sospecha_diag, 
-         estab_dest,presta_est, 
-         f_salida, c_salida) 
-
-
+fact_le_cerrada <- procesar_fact_le(data_bruta,1) #1 = CNE
 rm(egresos_bruto)
 
   

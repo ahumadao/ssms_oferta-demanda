@@ -56,12 +56,12 @@ dim_abreviaciones <- import(ruta_dim_abreviaciones) |> clean_names()
 
 # 7. DIM ESTABLECIMIENTO DE INSCRIPCIÓN ----
 
-# dim_inscripcion <- import(ruta_dim_inscripcion_APS) %>% clean_names %>%
-#   select(rut_paciente,rut,apellido_paterno,consultorio_inscripcion,comuna_establecimiento_id,comuna_establecimiento) %>%
-#   filter(!is.na(rut_paciente)|!is.na(rut)) %>%
-#   mutate(
-#     rut_paciente_sdv = str_sub(rut_paciente, 1, -2),
-#     rut_sdv = str_sub(rut, 1, -2)
-#   )
+dim_inscripcion <- import(ruta_dim_inscripcion_APS) %>% clean_names %>%
+  select(rut_paciente,rut,apellido_paterno,consultorio_inscripcion,comuna_establecimiento_id,comuna_establecimiento) %>%
+  filter(!is.na(rut_paciente)|!is.na(rut)) %>%
+  mutate(
+    rut_paciente_sdv = str_sub(rut_paciente, 1, -2),
+    rut_sdv = str_sub(rut, 1, -2)
+  )
 
 
